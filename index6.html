@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Weather</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: transparent;
+      margin: 0;
+      padding: 16px;
+    }
+
+    .weather-card {
+      background: rgba(255, 248, 240, 0.85);   /* Warm cream/beige tone */
+      border-radius: 22px;
+      padding: 22px 24px;
+      max-width: 340px;
+      box-shadow: 0 6px 25px rgba(0, 0, 0, 0.07);
+      border: 1px solid rgba(180, 160, 140, 0.15);
+      backdrop-filter: blur(12px);
+    }
+
+    .city-input {
+      width: 100%;
+      padding: 14px 18px;
+      font-size: 15.5px;
+      border: 1px solid #e8d9c7;
+      border-radius: 16px;
+      background: white;
+      margin-bottom: 14px;
+      color: #5c4a38;
+    }
+
+    .city-input:focus {
+      outline: none;
+      border-color: #d4b89f;
+      box-shadow: 0 0 0 4px rgba(212, 184, 159, 0.12);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      font-size: 14.5px;
+      font-weight: 500;
+      color: #5c4a38;
+      background: #f5e9d8;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+
+    .btn:hover {
+      background: #f0e0c8;
+      transform: translateY(-1px);
+    }
+
+    .weather-display {
+      margin-top: 20px;
+      display: none;
+      align-items: center;
+      gap: 22px;
+    }
+
+    .weather-icon {
+      font-size: 72px;
+      line-height: 1;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.08));
+    }
+
+    .weather-info h3 {
+      margin: 0 0 6px 0;
+      font-size: 17.5px;
+      font-weight: 600;
+      color: #4a3a2a;
+    }
+
+    .temp {
+      font-size: 34px;
+      font-weight: 600;
+      color: #3f2f1f;
+      margin: 4px 0 8px 0;
+    }
+
+    .detail {
+      font-size: 14.5px;
+      color: #6b5a48;
+      margin: 3px 0;
+    }
+
+    .refresh-btn {
+      margin-top: 12px;
+      font-size: 13px;
+      color: #8c7a62;
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="weather-card">
+    <input type="text" id="city" class="city-input" placeholder="Enter your city (e.g. Berlin)" />
+
+    <button onclick="getWeather()" class="btn">Show Weather</button>
+
+    <div id="weather-display" class="weather-display">
+      <div class="weather-icon" id="icon"></div>
+      <div class="weather-info">
+        <h3 id="location"></h3>
+        <p class="temp" id="temperature"></p>
+        <p class="detail" id="windspeed"></p>
+        <p class="detail" id="time"></p>
+      </div>
+    </div>
+
+    <button onclick="getWeather()" class="refresh-btn" id="refresh-btn" style="display: none;">
+      ↻ Refresh
+    </button>
+  </div>
+
+  <script>
+    async function getWeather() {
+      const cityInput = document.getElementById("city").value.trim();
+      const display = document.getElementById("weather-display");
+      const refreshBtn = document.getElementById("refresh-btn");
+
+      if (!cityInput) {
+        alert("Please enter a city name");
+        return;
+      }
+
+      try {
+        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${cityInput}&count=1`);
+        const geoData = await geoRes.json();
+
+        if (!geoData.results || geoData.results.length === 0) {
+          alert("City not found. Please try again.");
+          return;
+        }
+
+        const { latitude, longitude, name, country } = geoData.results[0];
+
+        const weatherRes = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`
+        );
+        const weatherData = await weatherRes.json();
+        const w = weatherData.current_weather;
+
+        const icons = {
+          0: "☀️", 1: "⛅", 2: "☁️", 3: "☁️",
+          45: "🌫️", 48: "🌫️",
+          51: "🌦️", 61: "🌧️", 63: "🌧️", 65: "🌧️",
+          71: "❄️", 73: "❄️", 75: "❄️",
+          95: "⛈️", 96: "⛈️", 99: "⛈️"
+        };
+
+        document.getElementById("icon").innerHTML = icons[w.weathercode] || "⛅";
+        document.getElementById("location").textContent = `${name}, ${country}`;
+        document.getElementById("temperature").textContent = `${Math.round(w.temperature)}°C`;
+        document.getElementById("windspeed").textContent = `💨 ${w.windspeed} km/h`;
+        document.getElementById("time").textContent = `Updated: ${w.time.replace("T", " ")}`;
+
+        display.style.display = "flex";
+        refreshBtn.style.display = "flex";
+
+      } catch (err) {
+        alert("Could not load weather. Please check your connection.");
+      }
+    }
+  </script>
+</body>
+</html>
