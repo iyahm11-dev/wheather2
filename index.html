@@ -131,55 +131,68 @@
     </button>
   </div>
 
-  <script>
-    async function getWeather() {
-      const cityInput = document.getElementById("city").value.trim();
-      const display = document.getElementById("weather-display");
-      const refreshBtn = document.getElementById("refresh-btn");
+<script>
+  // 1. Beim Laden der Seite prüfen, ob ein Ort gespeichert ist
+  window.onload = function() {
+    const savedCity = localStorage.getItem("lastCity");
+    if (savedCity) {
+      document.getElementById("city").value = savedCity;
+      getWeather();
+    }
+  };
 
-      if (!cityInput) {
-        alert("Please enter a city name");
+  async function getWeather() {
+    const cityInput = document.getElementById("city").value.trim();
+    const display = document.getElementById("weather-display");
+    const refreshBtn = document.getElementById("refresh-btn");
+
+    if (!cityInput) {
+      alert("Please enter a city name");
+      return;
+    }
+
+    try {
+      const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${cityInput}&count=1`);
+      const geoData = await geoRes.json();
+
+      if (!geoData.results || geoData.results.length === 0) {
+        alert("City not found. Please try again.");
         return;
       }
 
-      try {
-        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${cityInput}&count=1`);
-        const geoData = await geoRes.json();
+      // 2. Ort im LocalStorage speichern, wenn die Suche erfolgreich war
+      localStorage.setItem("lastCity", cityInput);
 
-        if (!geoData.results || geoData.results.length === 0) {
-          alert("City not found. Please try again.");
-          return;
-        }
+      const { latitude, longitude, name, country } = geoData.results[0];
 
-        const { latitude, longitude, name, country } = geoData.results[0];
+      const weatherRes = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`
+      );
+      const weatherData = await weatherRes.json();
+      const w = weatherData.current_weather;
 
-        const weatherRes = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`
-        );
-        const weatherData = await weatherRes.json();
-        const w = weatherData.current_weather;
+      const icons = {
+        0: "☀️", 1: "⛅", 2: "☁️", 3: "☁️",
+        45: "🌫️", 48: "🌫️",
+        51: "🌦️", 61: "🌧️", 63: "🌧️", 65: "🌧️",
+        71: "❄️", 73: "❄️", 75: "❄️",
+        95: "⛈️", 96: "⛈️", 99: "⛈️"
+      };
 
-        const icons = {
-          0: "☀️", 1: "⛅", 2: "☁️", 3: "☁️",
-          45: "🌫️", 48: "🌫️",
-          51: "🌦️", 61: "🌧️", 63: "🌧️", 65: "🌧️",
-          71: "❄️", 73: "❄️", 75: "❄️",
-          95: "⛈️", 96: "⛈️", 99: "⛈️"
-        };
+      document.getElementById("icon").innerHTML = icons[w.weathercode] || "⛅";
+      document.getElementById("location").textContent = `${name}, ${country}`;
+      document.getElementById("temperature").textContent = `${Math.round(w.temperature)}°C`;
+      document.getElementById("windspeed").textContent = `💨 ${w.windspeed} km/h`;
+      document.getElementById("time").textContent = `Updated: ${w.time.replace("T", " ")}`;
 
-        document.getElementById("icon").innerHTML = icons[w.weathercode] || "⛅";
-        document.getElementById("location").textContent = `${name}, ${country}`;
-        document.getElementById("temperature").textContent = `${Math.round(w.temperature)}°C`;
-        document.getElementById("windspeed").textContent = `💨 ${w.windspeed} km/h`;
-        document.getElementById("time").textContent = `Updated: ${w.time.replace("T", " ")}`;
+      display.style.display = "flex";
+      refreshBtn.style.display = "flex";
 
-        display.style.display = "flex";
-        refreshBtn.style.display = "flex";
-
-      } catch (err) {
-        alert("Could not load weather. Please check your connection.");
-      }
+    } catch (err) {
+      alert("Could not load weather. Please check your connection.");
     }
-  </script>
+  }
+</script>
+
 </body>
 </html>
